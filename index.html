@@ -1,2 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>口袋單字卡</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f1c40f;
+            --gray: #95a5a6;
+            --bg: #f5f7fa;
+        }
 
-<input type="button" value="click">
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 頂部導航 */
+        header {
+            background: #fff;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        /* 主要內容區 */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 讓內容水平置中 */
+            width: 100%;
+        }
+
+        /* 視圖區塊通用設定 */
+        .view-section {
+            width: 100%;
+            display: none; /* 預設隱藏 */
+        }
+        
+        /* 卡片模式專用樣式 - 強制垂直排列 */
+        #view-card {
+            flex-direction: column; 
+            align-items: center;
+        }
+
+        /* 單字卡片樣式 */
+        .card-container {
+            width: 100%;
+            max-width: 400px;
+            height: 250px;
+            perspective: 1000px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-front {
+            background: #fff;
+            color: #333;
+        }
+
+        .card-back {
+            background: var(--primary);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .word-text { font-size: 2rem; font-weight: bold; margin-bottom: 10px; }
+        .word-def { font-size: 1.2rem; }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* 控制按鈕區 */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        button:active { opacity: 0.7; transform: scale(0.98); }
+        
+        .btn-fav { background: #fff; color: var(--warning); border: 2px solid var(--warning); }
+        .btn-fav.active { background: var(--warning); color: #fff; }
+        
+        .btn-disable { background: #fff; color: var(--gray); border: 2px solid var(--gray); }
+        .btn-disable.active { background: var(--gray); color: #fff; }
+
+        .btn-next { background: var(--primary); color: white; grid-column: span 2; }
+
+        /* 頁籤切換 */
+        .tabs {
+            display: flex;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 5px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .tab.active { background: var(--primary); color: white; }
+
+        /* 列表與設定區塊 */
+        .section-block {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .list-item.disabled { text-decoration: line-through; color: var(--gray); }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn-danger { background: var(--danger); color: white; width: 100%; margin-top: 5px;}
+        .btn-success { background: var(--success); color: white; width: 100%; }
+        .btn-restore { background: #34495e; color: white; width: 100%; margin-top: 5px;}
+
+        /* 底部導航 */
+        nav {
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 10;
+        }
+
+        .nav-item {
+            font-size: 0.8rem;
+            text-align: center;
+            color: var(--gray);
+            cursor: pointer;
+        }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div id="header-title">單字卡 (全部)</div>
+    <div style="font-size:0.8rem" id="count-display">0/0</div>
+</header>
+
+<main>
+    <!-- 卡片模式 -->
+    <div id="view-card" class="view-section">
+        <div class="card-container" onclick="flipCard()">
+            <div class="card" id="flashcard">
+                <div class="card-face card-front">
+                    <div class="status-badge" id="card-badge"></div>
+                    <div class="word-text" id="card-term">無單字</div>
+                    <div style="color:#888; font-size:0.8rem;">(點擊翻面)</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="word-text" id="card-def">請匯入單字</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-fav" id="btn-fav" onclick="toggleFav()">♥<span style="font-size:0.6rem">最愛</span></button>
+            <button class="btn-disable" id="btn-disable" onclick="toggleDisable()">Ø<span style="font-size:0.6rem">停用</span></button>
+            <button class="btn-next" onclick="nextCard()">下一個 Next</button>
+        </div>
+        
+        <div style="text-align: center; color: #888; font-size: 0.8rem; margin-top:10px;">
+            目前模式：<span id="mode-display">全部單字</span>
+        </div>
+    </div>
+
+    <!-- 列表模式 -->
+    <div id="view-list" class="view-section">
+        <div class="tabs">
+            <div class="tab active" onclick="switchListTab('all')">全部</div>
+            <div class="tab" onclick="switchListTab('fav')">我的最愛</div>
+        </div>
+        <div id="list-content" class="section-block" style="box-shadow:none; padding:0;">
+            <!-- JS 動態生成 -->
+        </div>
+    </div>
+
+    <!-- 設定與匯入模式 -->
+    <div id="view-settings" class="view-section">
+        
+        <div class="section-block">
+            <h3>匯入單字</h3>
+            <p style="font-size:0.8rem; color:#666;">格式：單字,定義 (換行新增)</p>
+            <textarea id="import-area" placeholder="Apple, 蘋果&#10;Banana, 香蕉"></textarea>
+            <button class="btn-success" onclick="importWords()">匯入</button>
+        </div>
+
+        <div class="section-block">
+            <h3>資料管理</h3>
+            <button class="btn-danger" onclick="clearAllWords()">清除所有單字 (含備份)</button>
+            <button class="btn-restore" onclick="restoreBackup()">還原上一次刪除</button>
+            <p id="backup-status" style="font-size:0.8rem; color:#888; margin-top:5px;"></p>
+        </div>
+    </div>
+</main>
+
+<nav>
+    <div class="nav-item active" onclick="switchView('card', this)">
+        <span class="nav-icon">🎴</span>卡片
+    </div>
+    <div class="nav-item" onclick="switchView('list', this)">
+        <span class="nav-icon">📋</span>清單
+    </div>
+    <div class="nav-item" onclick="switchView('settings', this)">
+        <span class="nav-icon">⚙️</span>設定
+    </div>
+</nav>
+
+<script>
+    // 資料結構：Array of Objects { term, def, isFav, isDisabled, id }
+    let words = [];
+    let bakWords = []; // 備份變數
+    let currentCardIndex = -1;
+    let cardQueue = []; // 當前播放佇列
+    let currentMode = 'all'; // 'all' or 'fav'
+
+    // 初始化
+    window.onload = function() {
+        loadData();
+        updateBackupStatus();
+        switchView('card', document.querySelector('.nav-item')); // 預設進入卡片頁
+    };
+
+    // --- 資料操作 ---
+
+    function loadData() {
+        const stored = localStorage.getItem('vocab_data');
+        if (stored) {
+            words = JSON.parse(stored);
+        }
+        const backed = localStorage.getItem('vocab_bak');
+        if (backed) {
+            bakWords = JSON.parse(backed);
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem('vocab_data', JSON.stringify(words));
+        renderList(); // 更新列表
+    }
+
+    function saveBackup() {
+        // 深拷貝當前數據到 bak
+        bakWords = JSON.parse(JSON.stringify(words));
+        localStorage.setItem('vocab_bak', JSON.stringify(bakWords));
+        updateBackupStatus();
+    }
+
+    function updateBackupStatus() {
+        const el = document.getElementById('backup-status');
+        if(bakWords.length > 0) {
+            el.innerText = `備份中有 ${bakWords.length} 個單字`;
+        } else {
+            el.innerText = "目前無備份";
+        }
+    }
+
+    // --- 匯入與清除 ---
+
+    function importWords() {
+        const text = document.getElementById('import-area').value;
+        if (!text.trim()) return alert("請輸入內容");
+
+        const lines = text.split('\n');
+        let count = 0;
+        lines.forEach(line => {
+            // 支援 逗號 或 冒號 分隔
+            let parts = line.split(/[,，:：]/); 
+            if (parts.length >= 2) {
+                const term = parts[0].trim();
+                const def = parts.slice(1).join(' ').trim();
+                if (term && def) {
+                    words.push({
+                        id: Date.now() + Math.random(),
+                        term: term,
+                        def: def,
+                        isFav: false,
+                        isDisabled: false
+                    });
+                    count++;
+                }
+            }
+        });
+
+        saveData();
+        document.getElementById('import-area').value = '';
+        alert(`成功匯入 ${count} 個單字`);
+        refreshCardQueue();
+    }
+
+    function clearAllWords() {
+        if (words.length === 0) return alert("目前沒有單字");
+        
+        if (confirm("確定要清除所有單字嗎？\n(系統會自動備份一次，以防誤刪)")) {
+            saveBackup(); // 1. 儲存到 bak 變數 (同時寫入 localStorage backup)
+            
+            words = []; // 2. 移除所有單字
+            saveData(); // 3. 更新主儲存區
+            
+            refreshCardQueue();
+            renderCard();
+            alert("已清除所有單字，若需復原請至設定頁點擊「還原」");
+        }
+    }
+
+    function restoreBackup() {
+        if (bakWords.length === 0) return alert("沒有可還原的備份資料");
+        
+        if (confirm(`確定還原備份中的 ${bakWords.length} 個單字？\n這將覆蓋目前的清單。`)) {
+            words = JSON.parse(JSON.stringify(bakWords));
+            saveData();
+            refreshCardQueue();
+            renderCard();
+            alert("還原成功！");
+        }
+    }
+
+    // --- 卡片邏輯 ---
+
+    function switchMode(mode) {
+        currentMode = mode;
+        refreshCardQueue();
+    }
+
+    function refreshCardQueue() {
+        // 根據模式篩選單字
+        // 規則：停用的單字 (isDisabled) 永遠不進入卡片佇列
+        let source = words.filter(w => !w.isDisabled);
+
+        // 這裡做一個簡單的洗牌 (Fisher-Yates)
+        cardQueue = [...source];
+        for (let i = cardQueue.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
+        }
+        
+        currentCardIndex = 0;
+        
+        // 更新 UI 計數
+        updateCount();
+        renderCard();
+    }
+
+    function updateCount() {
+        document.getElementById('count-display').innerText = 
+            cardQueue.length > 0 ? `${currentCardIndex + 1}/${cardQueue.length}` : "0/0";
+    }
+
+    function renderCard() {
+        const cardTerm = document.getElementById('card-term');
+        const cardDef = document.getElementById('card-def');
+        const cardBadge = document.getElementById('card-badge');
+        const card = document.getElementById('flashcard');
+        const btnFav = document.getElementById('btn-fav');
+        const btnDisable = document.getElementById('btn-disable');
+
+        // 重置翻轉
+        card.classList.remove('is-flipped');
+
+        if (cardQueue.length === 0) {
+            cardTerm.innerText = "無可用單字";
+            cardDef.innerText = "請匯入單字或檢查停用列表";
+            cardBadge.innerText = "";
+            return;
+        }
+
+        const w = cardQueue[currentCardIndex];
+        
+        // 稍微延遲寫入文字避免翻轉動畫穿幫
+        setTimeout(() => {
+            cardTerm.innerText = w.term;
+            cardDef.innerText = w.def;
+            
+            // 更新按鈕狀態
+            if (w.isFav) {
+                btnFav.classList.add('active');
+                cardBadge.innerText = "❤️ 最愛";
+            } else {
+                btnFav.classList.remove('active');
+                cardBadge.innerText = "";
+            }
+
+            if (w.isDisabled) {
+                 btnDisable.classList.add('active');
+            } else {
+                 btnDisable.classList.remove('active');
+            }
+        }, 200);
+
+        updateCount();
+    }
+
+    function flipCard() {
+        document.getElementById('flashcard').classList.toggle('is-flipped');
+    }
+
+    function nextCard() {
+        if (cardQueue.length === 0) return;
+        currentCardIndex++;
+        if (currentCardIndex >= cardQueue.length) {
+            currentCardIndex = 0; // 循環播放
+        }
+        renderCard();
+    }
+
+    function toggleFav() {
+        if (cardQueue.length === 0) return;
+        const currentWord = cardQueue[currentCardIndex];
+        const originalWord = words.find(w => w.id === currentWord.id);
+        if (originalWord) {
+            originalWord.isFav = !originalWord.isFav;
+            currentWord.isFav = originalWord.isFav;
+            saveData();
+            renderCard();
+        }
+        event.stopPropagation();
+    }
+
+    function toggleDisable() {
+        if (cardQueue.length === 0) return;
+        const currentWord = cardQueue[currentCardIndex];
+        const originalWord = words.find(w => w.id === currentWord.id);
+        
+        if (originalWord) {
+            if (confirm(`確定要${originalWord.isDisabled ? '啟用' : '停用'}這個單字嗎？`)) {
+                originalWord.isDisabled = !originalWord.isDisabled;
+                saveData();
+                
+                if (originalWord.isDisabled) {
+                    cardQueue.splice(currentCardIndex, 1);
+                    if (currentCardIndex >= cardQueue.length) currentCardIndex = 0;
+                    renderCard();
+                } else {
+                    renderCard();
+                }
+            }
+        }
+        event.stopPropagation();
+    }
+
+    // --- 列表邏輯 ---
+
+    let currentListTab = 'all';
+
+    function switchListTab(tab) {
+        currentListTab = tab;
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        if(tab === 'all') document.querySelectorAll('.tab')[0].classList.add('active');
+        else document.querySelectorAll('.tab')[1].classList.add('active');
+        
+        renderList();
+    }
+
+    function renderList() {
+        const container = document.getElementById('list-content');
+        container.innerHTML = '';
+
+        let targetData = words;
+        if (currentListTab === 'fav') {
+            targetData = words.filter(w => w.isFav);
+        }
+
+        if (targetData.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">無資料</div>';
+            return;
+        }
+
+        targetData.forEach(w => {
+            const div = document.createElement('div');
+            div.className = `list-item ${w.isDisabled ? 'disabled' : ''}`;
+            
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <div style="font-weight:bold; font-size:1.1rem;">
+                        ${w.term} 
+                        ${w.isFav ? '<span style="color:var(--danger)">♥</span>' : ''}
+                    </div>
+                    <div style="color:#666; font-size:0.9rem;">${w.def}</div>
+                </div>
+                <div>
+                     <button style="padding:5px 10px; font-size:0.8rem; border:1px solid #ddd;" onclick="deleteSingle('${w.id}')">刪</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function deleteSingle(id) {
+        if(confirm("確定刪除此單字？")) {
+            words = words.filter(w => w.id != id);
+            saveData();
+            refreshCardQueue();
+        }
+    }
+
+    // --- UI 切換修正 ---
+
+    function switchView(viewName, navEl) {
+        // 隱藏所有區塊
+        document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
+        
+        const target = document.getElementById('view-' + viewName);
+        
+        // 針對卡片模式使用 flex 垂直置中，其他使用 block
+        if (viewName === 'card') {
+            target.style.display = 'flex';
+            target.style.flexDirection = 'column'; // 關鍵修正：確保垂直排列
+            target.style.alignItems = 'center';
+            refreshCardQueue();
+        } else {
+            target.style.display = 'block';
+            if (viewName === 'list') renderList();
+        }
+
+        // 導航狀態更新
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        if (navEl) navEl.classList.add('active');
+
+        // 更新標題
+        const titles = { 'card': '單字卡', 'list': '單字清單', 'settings': '設定' };
+        document.getElementById('header-title').innerText = titles[viewName];
+    }
+
+</script>
+
+</body>
+</html>
