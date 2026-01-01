@@ -1,179 +1,172 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英文時態測驗系統</title>
+    <title>英文時態測驗</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .option-btn.selected { border-color: #3b82f6; background-color: #eff6ff; }
+        .option-btn.selected { border-color: #3b82f6; background-color: #eff6ff; color: #1d4ed8; font-weight: 600; }
         .correct { background-color: #d1fae5 !important; border-color: #10b981 !important; color: #065f46; }
         .wrong { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #991b1b; }
-        /* 隱藏滾動條但保持功能 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-10 font-sans text-gray-900">
+<body class="bg-gray-50 min-h-screen pb-10">
 
     <div id="app" class="max-w-md mx-auto">
         <!-- Header -->
-        <header class="bg-white border-b sticky top-0 z-10 p-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-blue-600">English Quiz</h1>
-            <span id="q-count-badge" class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">題庫: 0</span>
+        <header class="bg-white border-b sticky top-0 z-10 p-4 flex justify-between items-center shadow-sm">
+            <h1 class="text-xl font-bold text-gray-800">English Tense Quiz</h1>
+            <span id="q-count" class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">題庫: 0</span>
         </header>
 
         <!-- 選單切換 -->
         <nav class="flex p-4 gap-2">
-            <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white shadow-sm">進行測驗</button>
-            <button onclick="switchTab('import')" id="tab-import" class="flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600">匯入/管理</button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white transition-all">進行測驗</button>
+            <button onclick="switchTab('import')" id="tab-import" class="flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600">匯入題目</button>
         </nav>
 
         <!-- 測驗區域 -->
         <section id="quiz-section" class="px-4">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 mb-6">
-                <label class="block text-sm font-semibold text-gray-600 mb-3">選擇練習範圍：</label>
-                <select id="category-filter" class="w-full p-3 border border-gray-300 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white">
-                    <option value="all">全部時態混合</option>
+            <div class="bg-white p-5 rounded-2xl border mb-6 shadow-sm">
+                <label class="block text-sm font-semibold text-gray-500 mb-2">選擇分類：</label>
+                <select id="category-filter" class="w-full p-3 border rounded-xl mb-4 bg-gray-50 outline-none">
+                    <option value="all">全部混合</option>
                 </select>
-                <button onclick="startQuiz()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 active:scale-95 transition-all shadow-md">
-                    開始隨機 10 題
+                <button onclick="startQuiz()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold active:scale-95 transition-transform">
+                    隨機抽取 10 題
                 </button>
             </div>
 
             <div id="quiz-container" class="hidden">
-                <div id="questions-list" class="space-y-6">
-                    <!-- 題目 -->
-                </div>
-                <button id="submit-btn" onclick="checkAnswers()" class="w-full mt-10 mb-6 bg-green-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg">提交並查看分數</button>
-                <div id="score-display" class="hidden text-center p-6 rounded-2xl font-bold text-2xl mb-10 shadow-inner"></div>
+                <div id="questions-list" class="space-y-6"></div>
+                <button id="submit-btn" onclick="checkAnswers()" class="w-full mt-10 mb-6 bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg">提交答案</button>
+                <div id="score-display" class="hidden text-center p-6 rounded-2xl font-bold text-2xl mb-10 border-2"></div>
             </div>
         </section>
 
-        <!-- 匯入與管理區域 -->
+        <!-- 匯入區域 -->
         <section id="import-section" class="hidden px-4">
-            <!-- 提示詞工具區 -->
-            <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 mb-6">
-                <h3 class="font-bold text-indigo-900 mb-2 flex items-center">
-                    <span class="mr-2">💡</span> 第一步：使用 AI 產生題目
-                </h3>
-                <p class="text-xs text-indigo-700 mb-4 leading-relaxed">
-                    複製下方指令貼給 ChatGPT，它會為你產生符合格式且隱藏答案的加密字串。
-                </p>
-                <div class="relative">
-                    <textarea id="ai-prompt" readonly class="w-full text-[10px] bg-white border border-indigo-200 rounded-lg p-3 h-24 text-gray-500 mb-2 overflow-hidden">請幫我產生 20 題英文時態選擇題。
-
-請嚴格依照以下 JSON 格式產生。
-
-格式：
-[{"category": "時態名稱", "question": "句子 (____)...", "options": ["A", "B", "C", "D"], "answer": 0}]
-(註：answer 為正確選項的索引值，從 0 開始)</textarea>
-                    <button onclick="copyPrompt()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold active:bg-indigo-800">複製 AI 提示詞</button>
-                </div>
+            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 mb-6">
+                <h3 class="font-bold text-amber-800 text-sm mb-2">使用說明：</h3>
+                <ol class="text-xs text-amber-700 space-y-1 list-decimal ml-4">
+                    <li>複製下方的「AI 提示詞」並貼給 AI。</li>
+                    <li>AI 會產生格式化的題目與答案。</li>
+                    <li>將 AI 產出的整段文字貼到下方輸入框點擊匯入。</li>
+                    <li>答案位於整段文字最下方，匯入後會自動對應。</li>
+                </ol>
+                <button onclick="copyPrompt()" class="mt-3 w-full bg-amber-600 text-white py-2 rounded-lg text-sm font-bold">複製 AI 提示詞</button>
             </div>
 
-            <!-- 匯入輸入區 -->
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                <h3 class="font-bold mb-2">第二步：匯入加密字串</h3>
-                <textarea id="import-data" class="w-full h-32 p-3 border border-gray-300 rounded-xl mb-4 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="在此貼上 ChatGPT 產生的 Base64 亂碼字串..."></textarea>
-                <button onclick="importQuestions()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold mb-6">確認匯入題庫</button>
+            <div class="bg-white p-5 rounded-2xl border shadow-sm">
+                <h3 class="font-bold mb-2 text-gray-700">貼上匯入內容：</h3>
+                <textarea id="import-data" class="w-full h-48 p-3 border rounded-xl mb-4 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Q1: [時態] 題目... | 選項1 | 選項2..."></textarea>
+                <button onclick="processImport()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold">確認匯入新題目</button>
                 
-                <hr class="mb-6">
-                <h3 class="font-bold text-red-600 mb-2">管理數據</h3>
-                <button onclick="clearData()" class="w-full border border-red-200 text-red-500 py-3 rounded-xl text-sm font-medium">清空目前所有題庫</button>
+                <div class="mt-8 pt-6 border-t">
+                    <button onclick="clearData()" class="w-full text-red-500 text-sm py-2">清空所有題庫數據</button>
+                </div>
             </div>
         </section>
     </div>
 
+    <!-- 隱藏的提示詞樣板 -->
+    <textarea id="prompt-template" class="hidden">請幫我產生 20 題英文時態選擇題。
+請務必遵守以下格式輸出，且不要使用 Markdown 代碼區塊 (不要加 ```)：
+
+[格式規範]
+每一題一行，格式為：Q: [分類] 題目內容... | 選項A | 選項B | 選項C | 選項D
+所有題目結束後，空一行。
+最後一行輸出答案，格式為：ANS: 0,1,2,0... (答案為選項索引，0代表第1個選項)
+
+[範例]
+Q: [過去簡單式] I (____) to school yesterday. | go | went | gone | going
+Q: [現在完成式] He (____) already finished. | has | have | is | was
+
+ANS: 1, 0</textarea>
+
     <script>
-        let allQuestions = JSON.parse(localStorage.getItem('quiz_data_tense')) || [];
+        let allQuestions = JSON.parse(localStorage.getItem('eng_quiz_v2')) || [];
         let currentQuestions = [];
         let userAnswers = {};
 
-        // 切換頁籤
         function switchTab(tab) {
             const isQuiz = tab === 'quiz';
             document.getElementById('quiz-section').classList.toggle('hidden', !isQuiz);
             document.getElementById('import-section').classList.toggle('hidden', isQuiz);
-            
-            // 按鈕樣式切換
-            const btnQuiz = document.getElementById('tab-quiz');
-            const btnImport = document.getElementById('tab-import');
-            
-            if(isQuiz) {
-                btnQuiz.className = "flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white shadow-sm";
-                btnImport.className = "flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600";
-            } else {
-                btnImport.className = "flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white shadow-sm";
-                btnQuiz.className = "flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600";
-            }
+            document.getElementById('tab-quiz').className = isQuiz ? "flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white" : "flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600";
+            document.getElementById('tab-import').className = !isQuiz ? "flex-1 py-2 rounded-lg text-center font-bold bg-blue-600 text-white" : "flex-1 py-2 rounded-lg text-center font-bold bg-white border text-gray-600";
             updateUI();
         }
 
-        // 複製提示詞
         function copyPrompt() {
-            const promptText = document.getElementById('ai-prompt');
-            promptText.select();
-            promptText.setSelectionRange(0, 99999); 
-            navigator.clipboard.writeText(promptText.value);
-            alert('提示詞已複製！請貼給 ChatGPT。');
+            const copyText = document.getElementById("prompt-template");
+            navigator.clipboard.writeText(copyText.value);
+            alert("提示詞已複製！請貼給 AI。");
         }
 
-        // 更新 UI 狀態
+        function processImport() {
+            const rawText = document.getElementById('import-data').value.trim();
+            if (!rawText) return alert("請貼上題目內容");
+
+            try {
+                const lines = rawText.split('\n').filter(l => l.trim() !== '');
+                const ansLineIndex = lines.findIndex(l => l.toUpperCase().startsWith('ANS:'));
+                
+                if (ansLineIndex === -1) throw new Error("找不到答案行 (ANS:)");
+
+                const ansLine = lines[ansLineIndex];
+                const answers = ansLine.replace(/ANS:/i, '').split(',').map(s => parseInt(s.trim()));
+                const qLines = lines.slice(0, ansLineIndex);
+
+                const newBatch = qLines.map((line, index) => {
+                    const parts = line.replace(/^Q:\s*/i, '').split('|').map(s => s.trim());
+                    if (parts.length < 5) return null;
+
+                    const catMatch = parts[0].match(/\[(.*?)\]/);
+                    const category = catMatch ? catMatch[1] : "未分類";
+                    const question = parts[0].replace(/\[.*?\]/, '').trim();
+
+                    return {
+                        category,
+                        question,
+                        options: parts.slice(1, 5),
+                        answer: answers[index]
+                    };
+                }).filter(q => q !== null);
+
+                if (newBatch.length === 0) throw new Error("解析失敗，請檢查格式");
+
+                allQuestions = allQuestions.concat(newBatch);
+                localStorage.setItem('eng_quiz_v2', JSON.stringify(allQuestions));
+                
+                alert(`成功匯入 ${newBatch.length} 題！`);
+                document.getElementById('import-data').value = '';
+                updateUI();
+            } catch (e) {
+                alert("匯入發生錯誤: " + e.message);
+            }
+        }
+
         function updateUI() {
             const categories = [...new Set(allQuestions.map(q => q.category))];
             const filter = document.getElementById('category-filter');
-            const currentVal = filter.value;
-            
-            filter.innerHTML = '<option value="all">全部時態混合</option>';
+            const savedVal = filter.value;
+            filter.innerHTML = '<option value="all">全部混合</option>';
             categories.forEach(cat => {
                 filter.innerHTML += `<option value="${cat}">${cat}</option>`;
             });
-            filter.value = currentVal;
-            
-            document.getElementById('q-count-badge').innerText = `題庫: ${allQuestions.length}`;
+            filter.value = categories.includes(savedVal) ? savedVal : 'all';
+            document.getElementById('q-count').innerText = `題庫: ${allQuestions.length}`;
         }
 
-        // 匯入邏輯
-        function importQuestions() {
-            const raw = document.getElementById('import-data').value.trim();
-            if(!raw) return alert('請先貼上資料');
-            try {
-                const decoded = atob(raw); 
-                const newData = JSON.parse(decoded);
-                if(Array.isArray(newData)) {
-                    allQuestions = allQuestions.concat(newData);
-                    localStorage.setItem('quiz_data_tense', JSON.stringify(allQuestions));
-                    alert(`成功匯入 ${newData.length} 題！`);
-                    document.getElementById('import-data').value = '';
-                    updateUI();
-                }
-            } catch (e) {
-                alert('匯入失敗！請確保貼上的是完整的 Base64 加密字串。');
-            }
-        }
-
-        // 清空資料
-        function clearData() {
-            if(confirm('確定要刪除所有已匯入的題目嗎？此操作不可還原。')) {
-                allQuestions = [];
-                localStorage.removeItem('quiz_data_tense');
-                updateUI();
-                alert('已清空題庫');
-            }
-        }
-
-        // 開始測驗
         function startQuiz() {
             const category = document.getElementById('category-filter').value;
             let filtered = category === 'all' ? [...allQuestions] : allQuestions.filter(q => q.category === category);
             
-            if (filtered.length === 0) {
-                alert('目前的分類中沒有題目，請先到匯入頁面加入題目。');
-                return;
-            }
+            if (filtered.length === 0) return alert("題庫是空的，請先匯入題目。");
 
-            // 洗牌並抽 10 題
+            // 隨機選 10 題
             currentQuestions = filtered.sort(() => 0.5 - Math.random()).slice(0, 10);
             userAnswers = {};
             
@@ -183,46 +176,41 @@
             window.scrollTo({ top: 400, behavior: 'smooth' });
         }
 
-        // 渲染題目
         function renderQuiz() {
             const list = document.getElementById('questions-list');
             list.innerHTML = '';
             currentQuestions.forEach((q, idx) => {
-                const qHtml = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100" id="q-block-${idx}">
-                        <div class="flex justify-between mb-2">
-                            <span class="text-xs font-bold text-blue-500 uppercase tracking-wider">${q.category}</span>
-                            <span class="text-xs text-gray-400">Question ${idx+1}</span>
+                list.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm" id="q-block-${idx}">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-tighter">${q.category}</span>
+                            <span class="text-xs text-gray-400">#${idx+1}</span>
                         </div>
-                        <p class="font-bold text-lg mb-4 text-gray-800 leading-tight">${q.question}</p>
-                        <div class="space-y-3">
+                        <p class="font-bold text-lg mb-4 text-gray-800">${q.question}</p>
+                        <div class="grid gap-3">
                             ${q.options.map((opt, optIdx) => `
                                 <button onclick="selectOption(${idx}, ${optIdx})" 
                                     id="q-${idx}-opt-${optIdx}"
-                                    class="option-btn w-full text-left p-4 border-2 border-gray-100 rounded-xl transition-all active:scale-[0.98] font-medium text-gray-600">
-                                    <span class="inline-block w-6 text-gray-400">${String.fromCharCode(65 + optIdx)}.</span> ${opt}
+                                    class="option-btn w-full text-left p-4 border-2 rounded-xl transition-all text-gray-700">
+                                    ${opt}
                                 </button>
                             `).join('')}
                         </div>
                     </div>
                 `;
-                list.innerHTML += qHtml;
             });
         }
 
         function selectOption(qIdx, optIdx) {
             userAnswers[qIdx] = optIdx;
             const buttons = document.querySelectorAll(`#q-block-${qIdx} .option-btn`);
-            buttons.forEach(btn => btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50', 'text-blue-700'));
-            
-            const selectedBtn = document.getElementById(`q-${qIdx}-opt-${optIdx}`);
-            selectedBtn.classList.add('selected', 'border-blue-500', 'bg-blue-50', 'text-blue-700');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            document.getElementById(`q-${qIdx}-opt-${optIdx}`).classList.add('selected');
         }
 
         function checkAnswers() {
-            const answeredCount = Object.keys(userAnswers).length;
-            if (answeredCount < currentQuestions.length) {
-                if(!confirm(`你還有 ${currentQuestions.length - answeredCount} 題沒寫，確定要交卷嗎？`)) return;
+            if (Object.keys(userAnswers).length < currentQuestions.length) {
+                if(!confirm("尚未完成所有題目，確定要交卷？")) return;
             }
 
             let score = 0;
@@ -230,29 +218,32 @@
                 const correctIdx = q.answer;
                 const userIdx = userAnswers[idx];
                 
-                // 標示正確答案
                 document.getElementById(`q-${idx}-opt-${correctIdx}`).classList.add('correct');
-                
                 if (userIdx === correctIdx) {
                     score++;
                 } else if (userIdx !== undefined) {
-                    // 標示錯誤答案
                     document.getElementById(`q-${idx}-opt-${userIdx}`).classList.add('wrong');
                 }
             });
 
             const scoreDiv = document.getElementById('score-display');
-            scoreDiv.innerText = `測驗得分：${score} / ${currentQuestions.length}`;
-            scoreDiv.className = `block text-center mt-6 p-6 rounded-2xl font-bold text-2xl ${score >= 6 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            scoreDiv.innerText = `得分：${score} / ${currentQuestions.length}`;
+            scoreDiv.className = `block text-center mt-6 p-6 rounded-2xl font-bold text-2xl ${score >= 6 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`;
             scoreDiv.classList.remove('hidden');
-            
-            document.getElementById('submit-btn').innerText = "再測驗一次";
-            document.getElementById('submit-btn').onclick = () => { location.reload(); };
             
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
-        // 初始化
+        function clearData() {
+            if(confirm('確定要永久刪除所有題庫嗎？')) {
+                allQuestions = [];
+                localStorage.removeItem('eng_quiz_v2');
+                updateUI();
+                alert('已清空。');
+                location.reload();
+            }
+        }
+
         updateUI();
     </script>
 </body>
